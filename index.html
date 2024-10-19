@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload de Planilha NPS</title>
+</head>
+
+<body>
+    <h1>Envie sua Planilha NPS</h1>
+    <form id="uploadForm">
+        <input type="file" id="fileInput" accept=".xlsx" required />
+        <button type="submit">Enviar</button>
+    </form>
+
+    <script>
+        document.getElementById('uploadForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Por favor, selecione um arquivo .xlsx.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = async () => {
+                const base64File = reader.result.split(',')[1];  // Pega apenas a parte base64
+
+                // Enviar o arquivo para a função Lambda
+                const response = await fetch('https://zaqn2knv55bi62h26ctwje3lru0qwmls.lambda-url.sa-east-1.on.aws/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ file: base64File }),
+                });
+
+                if (response.ok) {
+                    alert('Arquivo enviado e processado com sucesso!');
+                } else {
+                    alert('Erro ao enviar o arquivo.');
+                }
+            };
+        });
+    </script>
+</body>
+
+</html>
