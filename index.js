@@ -4,108 +4,100 @@ const xlsx = require('xlsx');
 const fs = require('fs');
 
 exports.handler = async (event) => {
-  const from = 'PMO <pmo@fiveacts.com.br>';
-  const pmoEmail = 'pmo@fiveacts.com.br';
+  // Verificar se a requisição é uma requisição de preflight (OPTIONS)
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'POST,OPTIONS',
+      },
+      body: JSON.stringify({ message: 'Preflight check successful' }),
+    };
+  }
 
-  // Verificar se o evento contém o arquivo base64
+  // Habilitar CORS na resposta inicial
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST,OPTIONS',
+  };
+
   try {
     const body = JSON.parse(event.body);
     const base64File = body.file;  // O arquivo .xlsx em base64
 
-    // Verificar se o arquivo foi enviado
     if (!base64File) {
       return {
         statusCode: 400,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Headers': 'Content-Type',
-          'Access-Control-Allow-Methods': 'POST,OPTIONS',
-        },
+        headers,  // Inclui os cabeçalhos CORS
         body: JSON.stringify({ message: 'Nenhum arquivo fornecido.' }),
       };
     }
 
-    // Caminho temporário onde o arquivo será salvo
     const filePath = '/tmp/input.xlsx';
-
-    // Escrever o arquivo base64 no diretório temporário
     fs.writeFileSync(filePath, Buffer.from(base64File, 'base64'));
 
-    // Carregar o arquivo .xlsx
     const workbook = xlsx.readFile(filePath);
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-    // Converter a planilha para JSON
     const data = xlsx.utils.sheet_to_json(sheet, { header: 1 });
-
-    // Regex para identificar URLs no texto
     const urlRegex = /(https?:\/\/[^\s]+)/g;
 
-    // Iterar pelas linhas da planilha, começando pela segunda linha (ignorando o cabeçalho)
     for (let i = 1; i < data.length; i++) {
-      const email = data[i][5];  // Coluna F (índice 5) contém o email
-      let mensagem = data[i][8];  // Coluna H (índice 7) contém a mensagem
+        const email = data[i][5];  // Coluna F (índice 5) contém o email
+        let mensagem = data[i][8];  // Coluna H (índice 7) contém a mensagem
 
-      // Verificar se o email e a mensagem estão presentes
-      if (email && mensagem) {
-        // Procurar pela URL no corpo da mensagem
-        const urls = mensagem.match(urlRegex);
-        let url = '';
-        
-        // Se houver uma URL, capture a primeira
-        if (urls && urls.length > 0) {
-          url = urls[0];
-          // Substituir a URL pelo botão "Responder Pesquisa"
-          mensagem = mensagem.replace(url, `
-            <a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: white; background-color: #4CAF50; text-decoration: none; border-radius: 5px;">Responder Pesquisa</a>
-          `);
-        }
+        if (email && mensagem) {
+            const urls = mensagem.match(urlRegex);
+            let url = '';
 
-        const htmlBody = `
-          <html>
-            <body>
-              <p>${mensagem.replace(/\n/g, '<br>')}</p>
-            </body>
-          </html>`;
+            if (urls && urls.length > 0) {
+            url = urls[0];
+            mensagem = mensagem.replace(url, `
+                <a href="${url}" style="display: inline-block; padding: 10px 20px; font-size: 16px; color: white; background-color: #582BD9; text-decoration: none; border-radius: 5px;">Responder Pesquisa</a>
+            `);
+            }
 
-        const params = {
-          Destination: {
-            ToAddresses: [email],
-            CcAddresses: [pmoEmail],  // Adicionar o PMO em cópia
-          },
-          Message: {
-            Body: {
-              Html: {
+            const htmlBody = `
+            <html>
+                <body>
+                <p>${mensagem.replace(/\n/g, '<br>')}</p>
+                </body>
+            </html>`;
+
+            const params = {
+            Destination: {
+                ToAddresses: [email],
+                //BccAddresses: ['pmo@fiveacts.com.br'],  // Adicionar o PMO como cópia oculta (BCC)
+            },
+            Message: {
+                Body: {
+                Html: {
+                    Charset: 'UTF-8',
+                    Data: "htmlBody",
+                },
+                },
+                Subject: {
                 Charset: 'UTF-8',
-                Data: htmlBody,  // Enviar o HTML com o botão
-              },
+                Data: 'NPS - Five Acts',
+                },
             },
-            Subject: {
-              Charset: 'UTF-8',
-              Data: 'NPS - Five Acts',  // Assunto do e-mail
-            },
-          },
-          Source: from,
-        };
+            Source: 'PMO <pmo@fiveacts.com.br>',
+            };
 
-        // Enviar o e-mail usando SES
-        try {
-          await SES.sendEmail(params).promise();
-          console.log(`E-mail enviado com sucesso para: ${email}`);
-        } catch (error) {
-          console.error(`Falha ao enviar e-mail para: ${email}, erro: ${error.message}`);
+            try {
+            await SES.sendEmail(params).promise();
+            console.log(`E-mail enviado com sucesso para: ${email}`);
+            } catch (error) {
+            console.error(`Falha ao enviar e-mail para: ${email}, erro: ${error.message}`);
+            }
         }
-      }
     }
 
-    // Resposta de sucesso
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*',  // Habilitar CORS
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS',
-      },
+      headers,  // Inclui os cabeçalhos CORS
       body: JSON.stringify({ message: 'Envio de e-mails concluído' }),
     };
 
@@ -114,11 +106,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': '*',  // Habilitar CORS mesmo em caso de erro
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST,OPTIONS',
-      },
+      headers,  // Inclui os cabeçalhos CORS
       body: JSON.stringify({ error: 'Erro ao processar o arquivo ou enviar e-mails.' }),
     };
   }
