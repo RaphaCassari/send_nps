@@ -70,6 +70,48 @@
             border-radius: 5px;
             text-align: center;
         }
+
+        #previewContainer {
+            margin-top: 20px;
+        }
+
+        #previewTable {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        #previewTable th,
+        #previewTable td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+
+        #previewTable th {
+            background-color: #582BD9;
+            color: white;
+            font-weight: bold;
+        }
+
+        #previewTable tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        #previewTable tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        #previewTable td {
+            color: #333;
+        }
+
+        h3 {
+            color: #333;
+            border-bottom: 2px solid #582BD9;
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
     </style>
 </head>
 
@@ -100,8 +142,9 @@
             <table id="previewTable">
                 <thead>
                     <tr>
+                        <th>Projeto</th>
+                        <th>Nome do Cliente</th>
                         <th>Email</th>
-                        <th>Mensagem</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -137,23 +180,26 @@
                 jsonData = [];
 
                 for (let i = 1; i < sheetData.length; i++) {
-                    const email = sheetData[i][5];  // Coluna F
-                    const mensagem = sheetData[i][8];  // Coluna I
-                    const colunaH = sheetData[i][7];  // Coluna H
+                    const projeto = sheetData[i][1];      // Coluna B
+                    const nomeCliente = sheetData[i][4];  // Coluna E
+                    const email = sheetData[i][5];        // Coluna F
+                    const colunaH = sheetData[i][7];      // Coluna H
 
                     // Ignorar a linha se a coluna H estiver com o valor "Sim"
                     if (colunaH === 'Sim') {
                         continue;
                     }
 
-                    if (email && mensagem) {
-                        jsonData.push({ email: email, mensagem: mensagem });
+                    if (email) {
+                        jsonData.push({ email, mensagem: `Olá ${nomeCliente}, participe da pesquisa para o projeto ${projeto}.` });
 
                         let row = previewTable.insertRow();
-                        let cellEmail = row.insertCell(0);
-                        let cellMessage = row.insertCell(1);
+                        let cellProjeto = row.insertCell(0);
+                        let cellNomeCliente = row.insertCell(1);
+                        let cellEmail = row.insertCell(2);
+                        cellProjeto.innerHTML = projeto;
+                        cellNomeCliente.innerHTML = nomeCliente;
                         cellEmail.innerHTML = email;
-                        cellMessage.innerHTML = mensagem;
                     }
                 }
 
@@ -185,7 +231,7 @@
             statusMessage.style.color = 'blue';
 
             try {
-                const response = await fetch('https://zaqn2knv55bi62h26ctwje3lru0qwmls.lambda-url.sa-east-1.on.aws/', {
+                const response = await fetch('https://bzq06794zl.execute-api.us-west-1.amazonaws.com/NPS_send_bulk/post', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
