@@ -186,9 +186,9 @@
                     const colunaH = sheetData[i][7];      // Coluna H
 
                     // Ignorar a linha se a coluna H estiver com o valor "Sim"
-                    if (colunaH === 'Sim') {
-                        continue;
-                    }
+                    //if (colunaH === 'Sim') {
+                    //    continue;
+                    //}
 
                     if (email) {
                         jsonData.push({ email, mensagem: `Olá ${nomeCliente}, participe da pesquisa para o projeto ${projeto}.` });
