@@ -183,6 +183,7 @@
                     const projeto = sheetData[i][1];      // Coluna B
                     const nomeCliente = sheetData[i][4];  // Coluna E
                     const email = sheetData[i][5];        // Coluna F
+                    const mensagem = sheetData[i][8];     // Coluna I
                     const colunaH = sheetData[i][7];      // Coluna H
 
                     // Ignorar a linha se a coluna H estiver com o valor "Sim"
@@ -190,8 +191,8 @@
                     //    continue;
                     //}
 
-                    if (email) {
-                        jsonData.push({ email, mensagem: `Olá ${nomeCliente}, participe da pesquisa para o projeto ${projeto}.` });
+                    if (email && mensagem) {
+                        jsonData.push({ email, mensagem });
 
                         let row = previewTable.insertRow();
                         let cellProjeto = row.insertCell(0);
